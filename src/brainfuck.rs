@@ -10,7 +10,7 @@ pub type Position = (usize, usize);
 pub struct Brainfuck<'a> {
     program: &'a [u8],
     ip: usize,
-    data: [u8; TAPE_SIZE],
+    tape: [u8; TAPE_SIZE],
     dp: usize,
     stack: Vec<(usize, Position)>,
     pos: Position,
@@ -28,7 +28,7 @@ impl<'a> Brainfuck<'a> {
         Brainfuck {
             program: program.as_bytes(),
             ip: 0,
-            data: [0; TAPE_SIZE],
+            tape: [0; TAPE_SIZE],
             dp: 0,
             stack: Vec::new(),
             pos: (1, 1),
@@ -36,13 +36,13 @@ impl<'a> Brainfuck<'a> {
     }
 
     #[allow(dead_code)]
-    pub fn data_pointer(&self) -> usize {
+    pub fn tape_pointer(&self) -> usize {
         self.dp
     }
 
     #[allow(dead_code)]
-    pub fn data(&self, range: Range<usize>) -> &[u8] {
-        &self.data[range]
+    pub fn tape(&self, range: Range<usize>) -> &[u8] {
+        &self.tape[range]
     }
 
     #[allow(dead_code)]
@@ -59,33 +59,25 @@ impl<'a> Brainfuck<'a> {
         loop {
             match self.current() {
                 Some('>') => {
-                    if self.dp < self.data.len() - 1 {
+                    if self.dp < self.tape.len() - 1 {
                         self.dp += 1;
                     }
                 },
                 Some('<') => {
-                    if self.dp > 0 {
-                        self.dp -= 1;
-                    }
+                    self.dp = self.dp.checked_sub(1).unwrap_or(0);
                 },
                 Some('+') => {
-                    if self.data[self.dp] == 254 {
-                        self.data[self.dp] = 0;
-                    } else {
-                        self.data[self.dp] += 1;
-                    }
+                    let byte = self.get_byte().checked_add(1).unwrap_or(0);
+                    self.set_byte(byte);
                 },
                 Some('-') => {
-                    if self.data[self.dp] == 0 {
-                        self.data[self.dp] = 254;
-                    } else {
-                        self.data[self.dp] -= 1;
-                    }
+                    let byte = self.get_byte().checked_sub(1).unwrap_or(255);
+                    self.set_byte(byte);
                 },
                 Some('.') => {
                     let _ = try!(
                         output
-                            .write(&[self.data[self.dp]])
+                            .write(&[self.get_byte()])
                             .map_err(Error::WriteError)
                     );
                 },
@@ -96,17 +88,17 @@ impl<'a> Brainfuck<'a> {
                             .read(&mut buffer)
                             .map_err(Error::ReadError)
                     );
-                    self.data[self.dp] = buffer[0];
+                    self.set_byte(buffer[0]);
                 },
                 Some('[') => {
-                    if self.data[self.dp] == 0 {
+                    if self.get_byte() == 0 {
                         self.advance_to_matching_paren();
                     } else {
                         self.push();
                     }
                 },
                 Some(']') => {
-                    if self.data[self.dp] != 0 {
+                    if self.get_byte() != 0 {
                         try!(self.return_to_matching_paren());
                     } else {
                         self.pop();
@@ -128,25 +120,40 @@ impl<'a> Brainfuck<'a> {
         Ok(())
     }
 
+    #[inline(always)]
+    fn set_byte(&mut self, byte: u8) {
+        self.tape[self.dp] = byte;
+    }
+
+    #[inline(always)]
+    fn get_byte(&self) -> u8 {
+        self.tape[self.dp]
+    }
+
+    #[inline(always)]
     fn advance(&mut self) {
         self.ip += 1;
         self.pos.1 += 1;
     }
 
+    #[inline(always)]
     fn current(&self) -> Option<char> {
         self.program
             .get(self.ip)
             .map(|byte| *byte as char)
     }
 
+    #[inline(always)]
     fn pop(&mut self) {
         let _ = self.stack.pop();
     }
 
+    #[inline(always)]
     fn push(&mut self) {
         self.stack.push((self.ip, self.pos));
     }
 
+    #[inline(always)]
     fn advance_to_matching_paren(&mut self) {
         let mut c = 0;
 
@@ -165,6 +172,7 @@ impl<'a> Brainfuck<'a> {
         }
     }
 
+    #[inline(always)]
     fn return_to_matching_paren(&mut self) -> Result {
         match self.stack.last() {
             Some(&(ip, pos)) => {
@@ -188,8 +196,8 @@ mod test {
     fn initialized() {
         let brainfuck = Brainfuck::new("");
 
-        assert_eq!(0, brainfuck.data_pointer());
-        assert_eq!(&[0, 0, 0, 0], brainfuck.data(0..4));
+        assert_eq!(0, brainfuck.tape_pointer());
+        assert_eq!(&[0, 0, 0, 0], brainfuck.tape(0..4));
     }
 
     #[test]
@@ -198,7 +206,7 @@ mod test {
         let result = brainfuck.run_pure();
 
         assert_eq!((), result.unwrap());
-        assert_eq!(1, brainfuck.data_pointer());
+        assert_eq!(1, brainfuck.tape_pointer());
     }
 
     #[test]
@@ -207,7 +215,7 @@ mod test {
         let result = brainfuck.run_pure();
 
         assert_eq!((), result.unwrap());
-        assert_eq!(0, brainfuck.data_pointer());
+        assert_eq!(0, brainfuck.tape_pointer());
     }
 
     #[test]
@@ -216,7 +224,7 @@ mod test {
         let result = brainfuck.run_pure();
 
         assert_eq!((), result.unwrap());
-        assert_eq!(1, brainfuck.data_pointer());
+        assert_eq!(1, brainfuck.tape_pointer());
     }
 
     #[test]
@@ -225,7 +233,7 @@ mod test {
         let result = brainfuck.run_pure();
 
         assert_eq!((), result.unwrap());
-        assert_eq!(&[1], brainfuck.data(0..1));
+        assert_eq!(&[1], brainfuck.tape(0..1));
     }
 
     #[test]
@@ -234,7 +242,7 @@ mod test {
         let result = brainfuck.run_pure();
 
         assert_eq!((), result.unwrap());
-        assert_eq!(&[2, 2, 2], brainfuck.data(0..3));
+        assert_eq!(&[2, 2, 2], brainfuck.tape(0..3));
     }
 
     #[test]
@@ -243,7 +251,7 @@ mod test {
         let result = brainfuck.run_pure();
 
         assert_eq!((), result.unwrap());
-        assert_eq!(&[254], brainfuck.data(0..1));
+        assert_eq!(&[255], brainfuck.tape(0..1));
     }
 
     #[test]
@@ -252,7 +260,7 @@ mod test {
         let result = brainfuck.run_pure();
 
         assert_eq!((), result.unwrap());
-        assert_eq!(&[253, 253, 253], brainfuck.data(0..3));
+        assert_eq!(&[254, 254, 254], brainfuck.tape(0..3));
     }
 
     #[test]
@@ -282,7 +290,7 @@ mod test {
         let result = brainfuck.run(&mut input.as_ref(), &mut io::sink());
 
         assert_eq!((), result.unwrap());
-        assert_eq!(&[5, 4, 3], brainfuck.data(0..3));
+        assert_eq!(&[5, 4, 3], brainfuck.tape(0..3));
     }
 
     #[test]
