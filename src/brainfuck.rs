@@ -331,21 +331,4 @@ mod test {
             String::from_utf8(output).unwrap()
         );
     }
-
-    #[test]
-    fn rewers() {
-        let mut brainfuck = Brainfuck::new(
-            "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---\
-            .+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.\n"
-        );
-
-        let mut output = Vec::new();
-        let result = brainfuck.run(&mut io::empty(), &mut output);
-
-        assert_eq!((), result.unwrap());
-        assert_eq!(
-            "Hello World!\n",
-            String::from_utf8(output).unwrap()
-        );
-    }
 }
