@@ -1,5 +1,4 @@
 use std::io;
-use std::iter::{self, FromIterator};
 use std::ops::Range;
 use std::result;
 
@@ -11,7 +10,7 @@ pub type Position = (usize, usize);
 pub struct Brainfuck<'a> {
     program: &'a [u8],
     ip: usize,
-    data: Vec<u8>,
+    data: [u8; TAPE_SIZE],
     dp: usize,
     stack: Vec<(usize, Position)>,
     pos: Position,
@@ -29,7 +28,7 @@ impl<'a> Brainfuck<'a> {
         Brainfuck {
             program: program.as_bytes(),
             ip: 0,
-            data: Vec::from_iter(iter::repeat(0).take(TAPE_SIZE)),
+            data: [0; TAPE_SIZE],
             dp: 0,
             stack: Vec::new(),
             pos: (1, 1),
