@@ -14,10 +14,10 @@ pub fn parse(bytes: &[u8]) -> Vec<Instruction> {
 
 fn parse_byte(b: &u8) -> Option<Instruction> {
     match *b as char {
-        '+' => Some(Instruction::Add),
-        '-' => Some(Instruction::Sub),
-        '>' => Some(Instruction::Right),
-        '<' => Some(Instruction::Left),
+        '+' => Some(Instruction::Add(1)),
+        '-' => Some(Instruction::Sub(1)),
+        '>' => Some(Instruction::Right(1)),
+        '<' => Some(Instruction::Left(1)),
         '.' => Some(Instruction::Out),
         ',' => Some(Instruction::In),
         '[' => Some(Instruction::Open),

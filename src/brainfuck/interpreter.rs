@@ -1,4 +1,5 @@
 use instruction::Instruction;
+use optimizer;
 use parser;
 use std::io;
 use std::ops::Range;
@@ -26,9 +27,10 @@ pub enum Error {
 impl Brainfuck {
     pub fn new(program: &str) -> Brainfuck {
         let instructions = parser::parse(program.as_bytes());
+        let optimized_instructions = optimizer::optimize(instructions);
 
         Brainfuck {
-            instructions: instructions,
+            instructions: optimized_instructions,
             ip: 0,
             tape: [0; TAPE_SIZE],
             dp: 0,
@@ -59,21 +61,27 @@ impl Brainfuck {
     {
         loop {
             match self.current() {
-                Some(&Instruction::Right) => {
-                    if self.dp < self.tape.len() - 1 {
-                        self.dp += 1;
+                Some(&Instruction::Right(n)) => {
+                    if self.dp + n < self.tape.len() - 1 {
+                        self.dp += n;
+                    } else {
+                        self.dp = self.tape.len();
                     }
                 },
-                Some(&Instruction::Left) => {
-                    self.dp = self.dp.checked_sub(1).unwrap_or(0);
+                Some(&Instruction::Left(n)) => {
+                    self.dp = self.dp.checked_sub(n).unwrap_or(0);
                 },
-                Some(&Instruction::Add) => {
-                    let byte = self.get_byte().checked_add(1).unwrap_or(0);
+                Some(&Instruction::Add(n)) => {
+                    let byte = self.get_byte().checked_add(n).unwrap_or(0);
                     self.set_byte(byte);
                 },
-                Some(&Instruction::Sub) => {
-                    let byte = self.get_byte().checked_sub(1).unwrap_or(255);
-                    self.set_byte(byte);
+                Some(&Instruction::Sub(n)) => {
+                    let byte = self.get_byte();
+                    let updated_byte = byte
+                            .checked_sub(n)
+                            .unwrap_or_else(|| 255 - n + self.get_byte() + 1);
+
+                    self.set_byte(updated_byte);
                 },
                 Some(&Instruction::Out) => {
                     let _ = try!(
