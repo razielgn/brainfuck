@@ -28,7 +28,7 @@ fn main() {
     match result {
         Err(Error::ReadError(err)) =>
             writeln!(stderr, "Read error: {:?}.", err).unwrap(),
-        Err(Error::WriteError(err)) =>
+        Err(Error::WriteError(ref err)) if err.kind() != io::ErrorKind::BrokenPipe =>
             writeln!(stderr, "Write error: {:?}.", err).unwrap(),
         Err(Error::UnbalancedParens((row, col))) =>
             writeln!(stderr, "Unbalanced paren at {}:{}.", row, col).unwrap(),
