@@ -1,3 +1,5 @@
+use instruction::Instruction;
+use parser;
 use std::io;
 use std::ops::Range;
 use std::result;
@@ -5,33 +7,32 @@ use std::result;
 const TAPE_SIZE: usize = 30_000;
 
 pub type Result = result::Result<(), Error>;
-pub type Position = (usize, usize);
 
-pub struct Brainfuck<'a> {
-    program: &'a [u8],
+pub struct Brainfuck {
+    instructions: Vec<Instruction>,
     ip: usize,
     tape: [u8; TAPE_SIZE],
     dp: usize,
-    stack: Vec<(usize, Position)>,
-    pos: Position,
+    stack: Vec<usize>,
 }
 
 #[derive(Debug)]
 pub enum Error {
     ReadError(io::Error),
     WriteError(io::Error),
-    UnbalancedParens(Position),
+    UnbalancedParens,
 }
 
-impl<'a> Brainfuck<'a> {
+impl Brainfuck {
     pub fn new(program: &str) -> Brainfuck {
+        let instructions = parser::parse(program.as_bytes());
+
         Brainfuck {
-            program: program.as_bytes(),
+            instructions: instructions,
             ip: 0,
             tape: [0; TAPE_SIZE],
             dp: 0,
             stack: Vec::new(),
-            pos: (1, 1),
         }
     }
 
@@ -58,30 +59,30 @@ impl<'a> Brainfuck<'a> {
     {
         loop {
             match self.current() {
-                Some('>') => {
+                Some(&Instruction::Right) => {
                     if self.dp < self.tape.len() - 1 {
                         self.dp += 1;
                     }
                 },
-                Some('<') => {
+                Some(&Instruction::Left) => {
                     self.dp = self.dp.checked_sub(1).unwrap_or(0);
                 },
-                Some('+') => {
+                Some(&Instruction::Add) => {
                     let byte = self.get_byte().checked_add(1).unwrap_or(0);
                     self.set_byte(byte);
                 },
-                Some('-') => {
+                Some(&Instruction::Sub) => {
                     let byte = self.get_byte().checked_sub(1).unwrap_or(255);
                     self.set_byte(byte);
                 },
-                Some('.') => {
+                Some(&Instruction::Out) => {
                     let _ = try!(
                         output
                             .write(&[self.get_byte()])
                             .map_err(Error::WriteError)
                     );
                 },
-                Some(',') => {
+                Some(&Instruction::In) => {
                     let mut buffer = [0; 1];
                     let _ = try!(
                         input
@@ -90,25 +91,20 @@ impl<'a> Brainfuck<'a> {
                     );
                     self.set_byte(buffer[0]);
                 },
-                Some('[') => {
+                Some(&Instruction::Open) => {
                     if self.get_byte() == 0 {
                         self.advance_to_matching_paren();
                     } else {
                         self.push();
                     }
                 },
-                Some(']') => {
+                Some(&Instruction::Close) => {
                     if self.get_byte() != 0 {
                         try!(self.return_to_matching_paren());
                     } else {
                         self.pop();
                     }
                 },
-                Some('\n') => {
-                    self.pos.0 += 1;
-                    self.pos.1 = 1;
-                },
-                Some(_) => {},
                 None => {
                     break;
                 }
@@ -133,14 +129,11 @@ impl<'a> Brainfuck<'a> {
     #[inline(always)]
     fn advance(&mut self) {
         self.ip += 1;
-        self.pos.1 += 1;
     }
 
     #[inline(always)]
-    fn current(&self) -> Option<char> {
-        self.program
-            .get(self.ip)
-            .map(|byte| *byte as char)
+    fn current(&self) -> Option<&Instruction> {
+        self.instructions.get(self.ip)
     }
 
     #[inline(always)]
@@ -150,7 +143,7 @@ impl<'a> Brainfuck<'a> {
 
     #[inline(always)]
     fn push(&mut self) {
-        self.stack.push((self.ip, self.pos));
+        self.stack.push(self.ip);
     }
 
     #[inline(always)]
@@ -161,11 +154,11 @@ impl<'a> Brainfuck<'a> {
             self.advance();
 
             match self.current() {
-                None | Some(']') if c == 0 =>
+                None | Some(&Instruction::Close) if c == 0 =>
                     break,
-                Some(']') =>
+                Some(&Instruction::Close) =>
                     c -= 1,
-                Some('[') =>
+                Some(&Instruction::Open) =>
                     c += 1,
                 _ => {}
             }
@@ -175,12 +168,11 @@ impl<'a> Brainfuck<'a> {
     #[inline(always)]
     fn return_to_matching_paren(&mut self) -> Result {
         match self.stack.last() {
-            Some(&(ip, pos)) => {
-                self.ip = ip;
-                self.pos = pos;
+            Some(ip) => {
+                self.ip = *ip;
             },
             None =>
-                return Err(Error::UnbalancedParens(self.pos)),
+                return Err(Error::UnbalancedParens),
         }
 
         Ok(())

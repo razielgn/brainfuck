@@ -1,4 +1,4 @@
-mod brainfuck;
+extern crate brainfuck;
 
 use brainfuck::{Brainfuck, Error};
 use std::env;
@@ -30,8 +30,8 @@ fn main() {
             writeln!(stderr, "Read error: {:?}.", err).unwrap(),
         Err(Error::WriteError(ref err)) if err.kind() != io::ErrorKind::BrokenPipe =>
             writeln!(stderr, "Write error: {:?}.", err).unwrap(),
-        Err(Error::UnbalancedParens((row, col))) =>
-            writeln!(stderr, "Unbalanced paren at {}:{}.", row, col).unwrap(),
+        Err(Error::UnbalancedParens) =>
+            writeln!(stderr, "Unbalanced parens found.").unwrap(),
         _ => {}
     }
 }
