@@ -1,11 +1,12 @@
 use instruction::Instruction;
+use std::collections::VecDeque;
 
-pub fn parse(bytes: &[u8]) -> Vec<Instruction> {
-    let mut instructions = Vec::with_capacity(bytes.len());
+pub fn parse(bytes: &[u8]) -> VecDeque<Instruction> {
+    let mut instructions = VecDeque::with_capacity(bytes.len());
 
     for b in bytes {
         if let Some(i) = parse_byte(b) {
-            instructions.push(i);
+            instructions.push_back(i);
         }
     }
 

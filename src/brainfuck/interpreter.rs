@@ -1,6 +1,7 @@
 use instruction::Instruction;
 use optimizer;
 use parser;
+use std::collections::VecDeque;
 use std::io;
 use std::ops::Range;
 use std::result;
@@ -10,7 +11,7 @@ const TAPE_SIZE: usize = 30_000;
 pub type Result = result::Result<(), Error>;
 
 pub struct Brainfuck {
-    instructions: Vec<Instruction>,
+    instructions: VecDeque<Instruction>,
     ip: usize,
     tape: [u8; TAPE_SIZE],
     dp: usize,

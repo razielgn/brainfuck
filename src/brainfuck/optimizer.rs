@@ -1,58 +1,61 @@
 use instruction::Instruction;
+use std::collections::VecDeque;
 
-pub fn optimize(instructions: Vec<Instruction>) -> Vec<Instruction> {
+pub fn optimize(instructions: VecDeque<Instruction>) -> VecDeque<Instruction> {
     compact_binary(instructions)
 }
 
-fn compact_binary(mut instructions: Vec<Instruction>) -> Vec<Instruction> {
+fn compact_binary(mut instructions: VecDeque<Instruction>) -> VecDeque<Instruction> {
     use instruction::Instruction::*;
 
     if instructions.len() < 2 { return instructions; }
 
-    let mut tail = instructions.split_off(2);
-    let head = instructions;
+    let a = instructions.pop_front().unwrap();
+    let b = instructions.pop_front().unwrap();
 
-    match (head[0], head[1]) {
+    match (a, b) {
         (Add(x), Add(y)) => {
-            let mut acc = vec!(Add(x + y));
-            acc.append(&mut tail);
-            compact_binary(acc)
+            instructions.push_front(Add(x + y));
+            compact_binary(instructions)
         }
         (Sub(x), Sub(y)) => {
-            let mut acc = vec!(Sub(x + y));
-            acc.append(&mut tail);
-            compact_binary(acc)
+            instructions.push_front(Sub(x + y));
+            compact_binary(instructions)
         }
         (Right(x), Right(y)) => {
-            let mut acc = vec!(Right(x + y));
-            acc.append(&mut tail);
-            compact_binary(acc)
+            instructions.push_front(Right(x + y));
+            compact_binary(instructions)
         }
         (Left(x), Left(y)) => {
-            let mut acc = vec!(Left(x + y));
-            acc.append(&mut tail);
-            compact_binary(acc)
+            instructions.push_front(Left(x + y));
+            compact_binary(instructions)
         }
         (Add(x), Sub(y)) | (Sub(x), Add(y)) if x  == y => {
-            compact_binary(tail)
+            compact_binary(instructions)
         }
         (Right(x), Left(y)) | (Left(x), Right(y)) if x == y => {
-            compact_binary(tail)
+            compact_binary(instructions)
         }
-        (a, b) => {
-            tail.insert(0, b);
-            let mut acc = vec!(a);
-            acc.append(&mut compact_binary(tail));
-            acc
+        _ => {
+            instructions.push_front(b);
+            let mut rest = compact_binary(instructions);
+            rest.push_front(a);
+            rest
         }
     }
 }
 
 #[cfg(test)]
 mod test {
-    use instruction::Instruction;
     use instruction::Instruction::*;
-    use super::optimize;
+    use instruction::Instruction;
+    use std::collections::VecDeque;
+    use std::iter::FromIterator;
+    use super::optimize as opt;
+
+    fn optimize(vec: Vec<Instruction>) -> Vec<Instruction> {
+        Vec::from_iter(opt(VecDeque::from_iter(vec.into_iter())).into_iter())
+    }
 
     #[test]
     fn compact_add() {
