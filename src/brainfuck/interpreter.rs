@@ -73,16 +73,12 @@ impl Brainfuck {
                     self.dp = self.dp.checked_sub(n).unwrap_or(0);
                 },
                 Some(&Instruction::Add(n)) => {
-                    let byte = self.get_byte().checked_add(n).unwrap_or(0);
+                    let byte = self.get_byte().wrapping_add(n);
                     self.set_byte(byte);
                 },
                 Some(&Instruction::Sub(n)) => {
-                    let byte = self.get_byte();
-                    let updated_byte = byte
-                            .checked_sub(n)
-                            .unwrap_or_else(|| 255 - n + self.get_byte() + 1);
-
-                    self.set_byte(updated_byte);
+                    let byte = self.get_byte().wrapping_sub(n);
+                    self.set_byte(byte);
                 },
                 Some(&Instruction::Out) => {
                     let _ = try!(
