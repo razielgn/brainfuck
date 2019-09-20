@@ -1,14 +1,9 @@
-use instruction::Instruction;
-use optimizer;
-use parser;
-use std::collections::VecDeque;
-use std::io;
-use std::ops::Range;
-use std::result;
+use crate::{instruction::Instruction, optimizer, parser};
+use std::{collections::VecDeque, io, ops::Range};
 
 const TAPE_SIZE: usize = 30_000;
 
-pub type Result = result::Result<(), Error>;
+pub type Result = std::result::Result<(), Error>;
 
 pub struct Brainfuck {
     instructions: VecDeque<Instruction>,
@@ -51,14 +46,13 @@ impl Brainfuck {
 
     #[allow(dead_code)]
     pub fn run_pure(&mut self) -> Result {
-        self.run(
-            &mut io::empty(),
-            &mut io::sink(),
-        )
+        self.run(&mut io::empty(), &mut io::sink())
     }
 
     pub fn run<R, W>(&mut self, input: &mut R, output: &mut W) -> Result
-        where R: io::Read, W: io::Write
+    where
+        R: io::Read,
+        W: io::Write,
     {
         loop {
             match self.current() {
@@ -68,48 +62,42 @@ impl Brainfuck {
                     } else {
                         self.dp = self.tape.len();
                     }
-                },
+                }
                 Some(&Instruction::Left(n)) => {
                     self.dp = self.dp.checked_sub(n).unwrap_or(0);
-                },
+                }
                 Some(&Instruction::Add(n)) => {
                     let byte = self.get_byte().wrapping_add(n);
                     self.set_byte(byte);
-                },
+                }
                 Some(&Instruction::Sub(n)) => {
                     let byte = self.get_byte().wrapping_sub(n);
                     self.set_byte(byte);
-                },
+                }
                 Some(&Instruction::Out) => {
-                    let _ = try!(
-                        output
-                            .write(&[self.get_byte()])
-                            .map_err(Error::WriteError)
-                    );
-                },
+                    let _ = output
+                        .write(&[self.get_byte()])
+                        .map_err(Error::WriteError)?;
+                }
                 Some(&Instruction::In) => {
                     let mut buffer = [0; 1];
-                    let _ = try!(
-                        input
-                            .read(&mut buffer)
-                            .map_err(Error::ReadError)
-                    );
+                    let _ = input.read(&mut buffer).map_err(Error::ReadError)?;
                     self.set_byte(buffer[0]);
-                },
+                }
                 Some(&Instruction::Open) => {
                     if self.get_byte() == 0 {
                         self.advance_to_matching_paren();
                     } else {
                         self.push();
                     }
-                },
+                }
                 Some(&Instruction::Close) => {
                     if self.get_byte() != 0 {
-                        try!(self.return_to_matching_paren());
+                        self.return_to_matching_paren()?;
                     } else {
                         self.pop();
                     }
-                },
+                }
                 None => {
                     break;
                 }
@@ -159,12 +147,9 @@ impl Brainfuck {
             self.advance();
 
             match self.current() {
-                None | Some(&Instruction::Close) if c == 0 =>
-                    break,
-                Some(&Instruction::Close) =>
-                    c -= 1,
-                Some(&Instruction::Open) =>
-                    c += 1,
+                None | Some(&Instruction::Close) if c == 0 => break,
+                Some(&Instruction::Close) => c -= 1,
+                Some(&Instruction::Open) => c += 1,
                 _ => {}
             }
         }
@@ -175,9 +160,8 @@ impl Brainfuck {
         match self.stack.last() {
             Some(ip) => {
                 self.ip = *ip;
-            },
-            None =>
-                return Err(Error::UnbalancedParens),
+            }
+            None => return Err(Error::UnbalancedParens),
         }
 
         Ok(())
@@ -186,8 +170,8 @@ impl Brainfuck {
 
 #[cfg(test)]
 mod test {
+    use super::Brainfuck;
     use std::io;
-    use super::{Brainfuck, Error};
 
     #[test]
     fn initialized() {
@@ -305,34 +289,28 @@ mod test {
     fn hello_world() {
         let mut brainfuck = Brainfuck::new(
             "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---\
-            .+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.\n"
+             .+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.\n",
         );
 
         let mut output = Vec::new();
         let result = brainfuck.run(&mut io::empty(), &mut output);
 
         assert_eq!((), result.unwrap());
-        assert_eq!(
-            "Hello World!\n",
-            String::from_utf8(output).unwrap()
-        );
+        assert_eq!("Hello World!\n", String::from_utf8(output).unwrap());
     }
 
     #[test]
     fn hello_world_complex() {
         let mut brainfuck = Brainfuck::new(
             ">++++++++[-<+++++++++>]<.>>+>-[+]++>++>+++[>[->+++<<+++>]<<]\
-            >-----.>->+++..+++.>-.<<+[>[+>+]>>]<--------------.>>.+++.---\
-            ---.--------.>+.>+."
+             >-----.>->+++..+++.>-.<<+[>[+>+]>>]<--------------.>>.+++.---\
+             ---.--------.>+.>+.",
         );
 
         let mut output = Vec::new();
         let result = brainfuck.run(&mut io::empty(), &mut output);
 
         assert_eq!((), result.unwrap());
-        assert_eq!(
-            "Hello World!\n",
-            String::from_utf8(output).unwrap()
-        );
+        assert_eq!("Hello World!\n", String::from_utf8(output).unwrap());
     }
 }

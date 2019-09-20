@@ -1,10 +1,10 @@
-extern crate brainfuck;
-
 use brainfuck::{Brainfuck, Error};
-use std::env;
-use std::fs::File;
-use std::io::{self, Read, Write};
-use std::path::Path;
+use std::{
+    env,
+    fs::File,
+    io::{self, Read, Write},
+    path::Path,
+};
 
 fn main() {
     let mut args = env::args();
@@ -26,12 +26,11 @@ fn main() {
     let result = brainfuck.run(&mut stdin, &mut stdout);
 
     match result {
-        Err(Error::ReadError(err)) =>
-            writeln!(stderr, "Read error: {:?}.", err).unwrap(),
-        Err(Error::WriteError(ref err)) if err.kind() != io::ErrorKind::BrokenPipe =>
-            writeln!(stderr, "Write error: {:?}.", err).unwrap(),
-        Err(Error::UnbalancedParens) =>
-            writeln!(stderr, "Unbalanced parens found.").unwrap(),
+        Err(Error::ReadError(err)) => writeln!(stderr, "Read error: {:?}.", err).unwrap(),
+        Err(Error::WriteError(ref err)) if err.kind() != io::ErrorKind::BrokenPipe => {
+            writeln!(stderr, "Write error: {:?}.", err).unwrap()
+        }
+        Err(Error::UnbalancedParens) => writeln!(stderr, "Unbalanced parens found.").unwrap(),
         _ => {}
     }
 }
