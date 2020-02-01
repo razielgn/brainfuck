@@ -5,7 +5,9 @@ pub fn optimize(instructions: VecDeque<Instruction>) -> VecDeque<Instruction> {
     compact_binary(instructions)
 }
 
-fn compact_binary(mut instructions: VecDeque<Instruction>) -> VecDeque<Instruction> {
+fn compact_binary(
+    mut instructions: VecDeque<Instruction>,
+) -> VecDeque<Instruction> {
     use Instruction::*;
 
     if instructions.len() < 2 {
@@ -32,8 +34,12 @@ fn compact_binary(mut instructions: VecDeque<Instruction>) -> VecDeque<Instructi
             instructions.push_front(Left(x + y));
             compact_binary(instructions)
         }
-        (Add(x), Sub(y)) | (Sub(x), Add(y)) if x == y => compact_binary(instructions),
-        (Right(x), Left(y)) | (Left(x), Right(y)) if x == y => compact_binary(instructions),
+        (Add(x), Sub(y)) | (Sub(x), Add(y)) if x == y => {
+            compact_binary(instructions)
+        }
+        (Right(x), Left(y)) | (Left(x), Right(y)) if x == y => {
+            compact_binary(instructions)
+        }
         _ => {
             instructions.push_front(b);
             let mut rest = compact_binary(instructions);
@@ -49,7 +55,9 @@ mod test {
     use std::{collections::VecDeque, iter::FromIterator};
 
     fn optimize(vec: Vec<Instruction>) -> Vec<Instruction> {
-        Vec::from_iter(super::optimize(VecDeque::from_iter(vec.into_iter())).into_iter())
+        Vec::from_iter(
+            super::optimize(VecDeque::from_iter(vec.into_iter())).into_iter(),
+        )
     }
 
     #[test]
