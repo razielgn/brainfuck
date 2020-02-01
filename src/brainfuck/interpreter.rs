@@ -64,7 +64,7 @@ impl Brainfuck {
                     }
                 }
                 Some(&Instruction::Left(n)) => {
-                    self.dp = self.dp.checked_sub(n).unwrap_or(0);
+                    self.dp = self.dp.saturating_sub(n);
                 }
                 Some(&Instruction::Add(n)) => {
                     let byte = self.get_byte().wrapping_add(n);
@@ -184,63 +184,56 @@ mod test {
     #[test]
     fn instruction_greater_than() {
         let mut brainfuck = Brainfuck::new(">");
-        let result = brainfuck.run_pure();
+        brainfuck.run_pure().unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!(1, brainfuck.tape_pointer());
     }
 
     #[test]
     fn instruction_less_than() {
         let mut brainfuck = Brainfuck::new("<");
-        let result = brainfuck.run_pure();
+        brainfuck.run_pure().unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!(0, brainfuck.tape_pointer());
     }
 
     #[test]
     fn instruction_less_than_2() {
         let mut brainfuck = Brainfuck::new(">><");
-        let result = brainfuck.run_pure();
+        brainfuck.run_pure().unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!(1, brainfuck.tape_pointer());
     }
 
     #[test]
     fn instruction_plus() {
         let mut brainfuck = Brainfuck::new("+");
-        let result = brainfuck.run_pure();
+        brainfuck.run_pure().unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!(&[1], brainfuck.tape(0..1));
     }
 
     #[test]
     fn instruction_plus_2() {
         let mut brainfuck = Brainfuck::new("++>++>++");
-        let result = brainfuck.run_pure();
+        brainfuck.run_pure().unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!(&[2, 2, 2], brainfuck.tape(0..3));
     }
 
     #[test]
     fn instruction_minus() {
         let mut brainfuck = Brainfuck::new("-");
-        let result = brainfuck.run_pure();
+        brainfuck.run_pure().unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!(&[255], brainfuck.tape(0..1));
     }
 
     #[test]
     fn instruction_minus_2() {
         let mut brainfuck = Brainfuck::new("-->-->--");
-        let result = brainfuck.run_pure();
+        brainfuck.run_pure().unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!(&[254, 254, 254], brainfuck.tape(0..3));
     }
 
@@ -248,9 +241,8 @@ mod test {
     fn instruction_dot() {
         let mut output: Vec<u8> = Vec::new();
         let mut brainfuck = Brainfuck::new(".");
-        let result = brainfuck.run(&mut io::empty(), &mut output);
+        brainfuck.run(&mut io::empty(), &mut output).unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!(vec!(0), output);
     }
 
@@ -258,9 +250,8 @@ mod test {
     fn instruction_dot_2() {
         let mut output = Vec::new();
         let mut brainfuck = Brainfuck::new("+>++>+++.<.<.");
-        let result = brainfuck.run(&mut io::empty(), &mut output);
+        brainfuck.run(&mut io::empty(), &mut output).unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!(vec!(3, 2, 1), output);
     }
 
@@ -268,9 +259,8 @@ mod test {
     fn instruction_comma() {
         let input = [5, 4, 3];
         let mut brainfuck = Brainfuck::new(",>,>,");
-        let result = brainfuck.run(&mut input.as_ref(), &mut io::sink());
+        brainfuck.run(&mut input.as_ref(), &mut io::sink()).unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!(&[5, 4, 3], brainfuck.tape(0..3));
     }
 
@@ -279,9 +269,8 @@ mod test {
         let input = [5, 4, 3];
         let mut output = Vec::new();
         let mut brainfuck = Brainfuck::new(",.>,.>,.");
-        let result = brainfuck.run(&mut input.as_ref(), &mut output);
+        brainfuck.run(&mut input.as_ref(), &mut output).unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!(vec!(5, 4, 3), output);
     }
 
@@ -293,9 +282,8 @@ mod test {
         );
 
         let mut output = Vec::new();
-        let result = brainfuck.run(&mut io::empty(), &mut output);
+        brainfuck.run(&mut io::empty(), &mut output).unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!("Hello World!\n", String::from_utf8(output).unwrap());
     }
 
@@ -308,9 +296,8 @@ mod test {
         );
 
         let mut output = Vec::new();
-        let result = brainfuck.run(&mut io::empty(), &mut output);
+        brainfuck.run(&mut io::empty(), &mut output).unwrap();
 
-        assert_eq!((), result.unwrap());
         assert_eq!("Hello World!\n", String::from_utf8(output).unwrap());
     }
 }
